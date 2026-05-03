@@ -1,20 +1,24 @@
 # GoCortex Broken Bank - Vulnerable Dependencies for Security Testing
 # WARNING: These packages contain known security vulnerabilities
 # This file is specifically for CI/CD security scanning tools that require requirements.txt format
+#
+# Versions in the "Installed in container" sections below match the pip install
+# block in Dockerfile exactly. Changes there must be mirrored here.
+# Versions in the "SCA scanner only" section are not installed at runtime; they
+# exist solely so SCA tooling reports CVE coverage for those ecosystems.
 
-# Web Framework with known vulnerabilities
+# Web Framework with known vulnerabilities (installed in container)
 Flask==2.0.1
 Werkzeug==2.0.1
 Jinja2==3.0.1
 
-# Database and ORM vulnerabilities
+# Database and ORM vulnerabilities (installed in container)
 SQLAlchemy==1.4.23
 Flask-SQLAlchemy==2.5.1
-psycopg2-binary==2.9.6
 
-# Authentication with weak implementations
+# Authentication with weak implementations (installed in container)
 Flask-Login==0.5.0
-PyJWT==2.1.0
+PyJWT==1.7.1
 
 # Cryptography with known CVEs (CVE-2023-23931, CVE-2023-0286)
 cryptography==39.0.0
@@ -30,16 +34,39 @@ PyYAML==6.0
 ldap3==2.8.1
 
 # MongoDB injection vulnerabilities
-pymongo==3.11.4
+pymongo==3.12.0
 
 # Email validation bypass
 email-validator==1.1.3
 
-# WSGI server vulnerabilities
-gunicorn==20.0.4
+# WSGI server vulnerabilities (installed in container)
+gunicorn==20.1.0
 
-# Additional vulnerable packages for comprehensive testing
-Pillow==8.3.2
+# Image processing (installed in container)
+Pillow==8.1.0
+
+# Authentication traffic generator runtime dependency (installed in container)
+faker==18.13.0
+
+# Local LLM runtime for the Mars Banking Initiative Concierge (installed in container)
+# Powers the OWASP LLM Top 10 demo at /concierge. No upstream CVEs assigned;
+# the vulnerability is in how the application uses the model (system-prompt
+# secret embedding + zero output filtering), not in llama-cpp-python itself.
+llama-cpp-python==0.3.5
+
+# OpenTelemetry observability stack (installed in container)
+# Poll-based Prometheus scrape on port 9464.
+opentelemetry-sdk==1.41.0
+opentelemetry-exporter-prometheus==0.62b0
+prometheus-client==0.20.0
+
+# -----------------------------------------------------------------------------
+# SCA scanner only - the packages below are NOT installed in the container.
+# They are listed here so SCA tooling reports CVE coverage across additional
+# ecosystems (PostgreSQL driver, XML processing, ML/data, crypto, networking,
+# dev tooling).
+# -----------------------------------------------------------------------------
+psycopg2-binary==2.9.6
 lxml==4.6.3
 paramiko==2.7.2
 pycrypto==2.6.1
@@ -82,8 +109,13 @@ subprocess32==3.5.4
 # Weak hashing
 hashlib-compat==1.0.1
 
+# =============================================================================
+# Installed in container (returns to runtime tier)
+# =============================================================================
 # PyGremlinBox varied license packages for license compliance testing
-# These packages trigger SCA license policy alerts for comprehensive testing
+# All 65 PyGremlinBox packages below ARE installed in the container by the
+# Dockerfile pip install block. They trigger SCA license policy alerts for
+# comprehensive testing.
 pygremlinbox-agpl-1-0==1.4.6
 pygremlinbox-agpl-1-0-only==1.4.6
 pygremlinbox-agpl-1-0-or-later==1.4.6
@@ -150,10 +182,3 @@ pygremlinbox-ucl-1-0==1.4.6
 pygremlinbox-unlicense==1.4.6
 pygremlinbox-wxwindows==1.4.6
 
-# PyGremlinBox malware simulation packages for security testing
-pygremlinbox-malware-network-indicators==1.4.6
-pygremlinbox-malware-c2-beacon==1.4.6
-pygremlinbox-malware-code-obfuscation==1.4.6
-pygremlinbox-malware-install-execution==1.4.6
-pygremlinbox-malware-credential-harvesting==1.4.6
-pygremlinbox-malware-cryptomining-indicators==1.4.6

@@ -4,7 +4,7 @@ import './globals.css';
 
 export const metadata = {
   title: 'SpaceATM Terminal - Mars Banking Initiative',
-  description: 'GoCortex Broken Bank SpaceATM Terminal v1.4.0',
+  description: 'GoCortex Broken Bank SpaceATM Terminal v1.5.0',
 };
 
 export default function RootLayout({ children }) {
@@ -19,7 +19,7 @@ export default function RootLayout({ children }) {
             </div>
             <div className="atm-header-right">
               <div>SA-7000 Series | FW-2025.03.1</div>
-              <div>Broken Bank v1.4.0</div>
+              <div>Broken Bank v1.5.0</div>
             </div>
           </div>
           <div className="atm-screen">

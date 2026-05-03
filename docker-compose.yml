@@ -10,6 +10,7 @@ services:
       - "8888:8888"   # Flask/Gunicorn - Banking UI and SAST endpoints
       - "9999:8080"   # Tomcat - Java exploit endpoints and Spring4Shell
       - "7777:7777"    # React/Next.js - SpaceATM Terminal and CVE-2025-55182
+      - "9464:9464"   # OTel metrics scrape endpoint (Prometheus format)
     environment:
       - SESSION_SECRET=hardcoded-docker-secret-key
       - DATABASE_URL=sqlite:///app/instance/gocortexbrokenbank.db

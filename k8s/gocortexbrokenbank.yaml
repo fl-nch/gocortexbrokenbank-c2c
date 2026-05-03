@@ -56,6 +56,12 @@ spec:
               containerPort: 7777
               hostPort: 7777
               protocol: TCP
+
+            # OTel Prometheus scrape endpoint (poll-based metrics)
+            - name: metrics
+              containerPort: 9464
+              hostPort: 9464
+              protocol: TCP
           env:
             - name: SESSION_SECRET
               value: "hardcoded-docker-secret-key"

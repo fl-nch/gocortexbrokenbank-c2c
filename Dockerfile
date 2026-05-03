@@ -15,21 +15,24 @@ USER root
 # Create man directories required by OpenJDK packages on slim images
 RUN apt-get update && \
     mkdir -p /usr/share/man/man1 && \
-    apt-get install -y \
-    curl \
-    wget \
-    git \
-    vim \
-    sudo \
-    ssh \
-    telnet \
-    netcat-openbsd \
-    iputils-ping \
-    openjdk-17-jdk \
-    maven \
-    ant \
-    supervisor \
-    && rm -rf /var/lib/apt/lists/*
+    for i in 1 2 3; do \
+        apt-get install -y \
+        curl \
+        wget \
+        git \
+        vim \
+        sudo \
+        ssh \
+        telnet \
+        netcat-openbsd \
+        iputils-ping \
+        openjdk-17-jdk \
+        maven \
+        ant \
+        supervisor \
+        && break || { if [ "$i" -eq 3 ]; then echo "apt-get install failed after 3 attempts"; exit 1; fi; echo "apt-get install attempt $i failed, retrying in 5s..."; sleep 5; }; \
+    done && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20 LTS for SpaceATM Terminal (React/Next.js)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
@@ -60,7 +63,8 @@ RUN chmod 644 /opt/tomcat/conf/tomcat-users.xml && \
     chmod 644 /opt/tomcat/webapps/host-manager/META-INF/context.xml
 
 # Exposing application ports (8888 for Flask/Gunicorn, 8080 for Tomcat - mapped to 9999 externally)
-EXPOSE 8888 8080 7777
+# 9464 is the OTel default Prometheus scrape port (poll-based metrics)
+EXPOSE 8888 8080 7777 9464
 
 # Adding secrets directly in Dockerfile (bad practice)
 ENV SECRET_KEY="hardcoded-secret-12345"
@@ -108,6 +112,9 @@ RUN pip install --no-cache-dir \
     pillow==8.1.0 \
     sqlalchemy==1.4.23 \
     faker==18.13.0 \
+    opentelemetry-sdk==1.41.0 \
+    opentelemetry-exporter-prometheus==0.62b0 \
+    prometheus-client==0.20.0 \
     pygremlinbox-agpl-1-0==1.4.6 \
     pygremlinbox-agpl-1-0-only==1.4.6 \
     pygremlinbox-agpl-1-0-or-later==1.4.6 \
@@ -173,12 +180,80 @@ RUN pip install --no-cache-dir \
     pygremlinbox-ucl-1-0==1.4.6 \
     pygremlinbox-unlicense==1.4.6 \
     pygremlinbox-wxwindows==1.4.6 \
-    pygremlinbox-malware-network-indicators==1.4.6 \
-    pygremlinbox-malware-c2-beacon==1.4.6 \
-    pygremlinbox-malware-code-obfuscation==1.4.6 \
-    pygremlinbox-malware-install-execution==1.4.6 \
-    pygremlinbox-malware-credential-harvesting==1.4.6 \
-    pygremlinbox-malware-cryptomining-indicators==1.4.6
+    llama-cpp-python==0.3.5
+
+# Bake the SmolLM2-135M-Instruct GGUF Q4_K_M weights into the image so the
+# Mars Banking Initiative Concierge can run inference without network access
+# at runtime. ~88 MB on disk; peak RSS during inference stays well under
+# 1.5 GB on a single CPU worker.
+#
+# This is a mirror of HuggingFaceTB/SmolLM2-135M-Instruct-GGUF
+# (smollm2-135m-instruct-q4_k_m.gguf). HuggingFace's anonymous resolve
+# endpoint now returns HTTP 401, so a "clone and docker build" workflow
+# cannot fetch from huggingface.co directly. We therefore default to a
+# GitHub Release asset on this repo (no auth, CDN-backed, doesn't bloat
+# the git tree). The SHA256 is pinned and verified after download; the
+# build fails fast on mismatch.
+#
+# To refresh the mirror (new quant or upstream revision):
+#   1. Re-run the bootstrap step in the task plan to pull the file from
+#      HuggingFace and compute its sha256sum.
+#   2. Bump the release tag (e.g. models-smollm2-135m-q4km-v2), upload
+#      the new file as a release asset.
+#   3. Update MODEL_RELEASE_URL and MODEL_SHA256 below.
+#
+# Three ways to supply a HuggingFace token for the opt-in HF path
+# (preferred order, most secure first):
+#   1. BuildKit secret (recommended for CI):
+#        DOCKER_BUILDKIT=1 docker build \
+#          --secret id=hf_token,src=./hf_token.txt -f Dockerfile .
+#      The token is mounted into the build at /run/secrets/hf_token,
+#      never appears in build-arg history, image layers, or provenance.
+#   2. Environment file with --build-arg (less secure, may leak via
+#      shell history or CI logs):
+#        docker build --build-arg HF_TOKEN=hf_xxx -f Dockerfile .
+#   3. No token (default): fetches from the GitHub Release mirror
+#      with no credentials.
+# NOTE: MODEL_SHA256 below is a placeholder. The maintainer must replace
+# it with the real 64-hex digest of the GGUF after running the bootstrap
+# step in .local/tasks/task-27.md (download once from HuggingFace,
+# sha256sum the file, attach as a release asset). Until that one-time
+# action is done, the build will fail fast with a clear error rather
+# than silently install an unverified file. The agent cannot perform
+# the bootstrap step itself: HuggingFace anonymous downloads now return
+# 401, and creating a GitHub Release requires maintainer credentials.
+ARG HF_TOKEN=
+ARG MODEL_SHA256=2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d
+ARG MODEL_RELEASE_URL=https://github.com/gocortexio/gocortexbrokenbank/releases/download/v1.5.0-beta.1/SmolLM2-135M-Instruct-Q4_K_M.gguf
+ARG MODEL_HF_URL=https://huggingface.co/HuggingFaceTB/SmolLM2-135M-Instruct-GGUF/resolve/main/smollm2-135m-instruct-q4_k_m.gguf
+RUN --mount=type=secret,id=hf_token,required=false \
+    mkdir -p /opt/models && \
+    DEST=/opt/models/smollm2-135m-instruct-q4_k_m.gguf && \
+    if [ "$MODEL_SHA256" = "PLACEHOLDER_SET_AFTER_RELEASE_UPLOAD" ]; then \
+        echo "ERROR: MODEL_SHA256 is still the placeholder."; \
+        echo "Run the bootstrap step in .local/tasks/task-27.md:"; \
+        echo "  1. huggingface-cli download HuggingFaceTB/SmolLM2-135M-Instruct-GGUF smollm2-135m-instruct-q4_k_m.gguf --local-dir ."; \
+        echo "  2. sha256sum smollm2-135m-instruct-q4_k_m.gguf"; \
+        echo "  3. gh release create models-smollm2-135m-q4km-v1 ./smollm2-135m-instruct-q4_k_m.gguf --title 'Concierge model assets v1'"; \
+        echo "  4. Replace MODEL_SHA256 in this Dockerfile with the digest from step 2."; \
+        exit 1; \
+    fi && \
+    TOKEN="$HF_TOKEN" && \
+    if [ -z "$TOKEN" ] && [ -s /run/secrets/hf_token ]; then \
+        TOKEN="$(cat /run/secrets/hf_token)"; \
+    fi && \
+    if [ -n "$TOKEN" ]; then \
+        echo "Fetching GGUF from HuggingFace (token supplied)"; \
+        wget -q --header="Authorization: Bearer ${TOKEN}" -O "$DEST" "$MODEL_HF_URL"; \
+    else \
+        echo "Fetching GGUF from GitHub Release mirror: $MODEL_RELEASE_URL"; \
+        wget -q -O "$DEST" "$MODEL_RELEASE_URL"; \
+    fi && \
+    unset TOKEN && \
+    echo "${MODEL_SHA256}  $DEST" | sha256sum -c - && \
+    chmod 644 "$DEST"
+ENV CONCIERGE_MODEL_PATH=/opt/models/smollm2-135m-instruct-q4_k_m.gguf
+ENV CONCIERGE_MODEL_NAME="SmolLM2-135M-Instruct GGUF Q4_K_M"
 
 # Copying sensitive files after installation
 COPY vulnerable_data/ /app/secrets/

@@ -1,6 +1,6 @@
 [project]
 name = "gocortexbrokenbank"
-version = "1.4.0"
+version = "1.5.0"
 description = "GoCortex Broken Bank - Intentionally vulnerable banking application for CI/CD security testing and educational purposes"
 license = "AGPL-3.0-or-later"
 authors = [
@@ -14,17 +14,24 @@ dependencies = [
     "flask==2.0.1",
     "flask-login==0.5.0",
     "flask-sqlalchemy==2.5.1",
-    "gunicorn==20.0.4",
+    "gunicorn==20.1.0",
     "ldap3==2.8.1",
-    "psycopg2-binary==2.9.6",
-    "pyjwt==2.1.0",
-    "pymongo==3.11.4",
+    "pyjwt==1.7.1",
+    "pymongo==3.12.0",
+    "pillow==8.1.0",
+    "faker==18.13.0",
+    "opentelemetry-sdk==1.41.0",
+    "opentelemetry-exporter-prometheus==0.62b0",
+    "prometheus-client==0.20.0",
     "pyyaml==6.0",
     "requests==2.25.1",
     "sqlalchemy==1.4.23",
     "urllib3==1.26.5",
     "werkzeug==2.0.1",
     "jinja2==3.0.1",
+    # Local LLM runtime for the Mars Banking Initiative Concierge (LLM01/LLM06 demo)
+    "llama-cpp-python==0.3.5",
+    "huggingface_hub",
     # PyGremlinBox varied license packages for license compliance testing
     "pygremlinbox-agpl-1-0==1.4.6",
     "pygremlinbox-agpl-1-0-only==1.4.6",
@@ -91,11 +98,14 @@ dependencies = [
     "pygremlinbox-ucl-1-0==1.4.6",
     "pygremlinbox-unlicense==1.4.6",
     "pygremlinbox-wxwindows==1.4.6",
-    # PyGremlinBox malware simulation packages for security testing
-    "pygremlinbox-malware-network-indicators==1.4.6",
-    "pygremlinbox-malware-c2-beacon==1.4.6",
-    "pygremlinbox-malware-code-obfuscation==1.4.6",
-    "pygremlinbox-malware-install-execution==1.4.6",
-    "pygremlinbox-malware-credential-harvesting==1.4.6",
-    "pygremlinbox-malware-cryptomining-indicators==1.4.6",
+]
+
+# Optional dependencies are NOT installed by the shipped Dockerfile pip block.
+# They are listed so that SCA tooling reports CVE coverage across additional
+# ecosystems. The PostgreSQL driver lives here because the container ships with
+# the SQLite default DATABASE_URL; psycopg2 is only required when an operator
+# overrides DATABASE_URL to point at PostgreSQL.
+[project.optional-dependencies]
+sca-scanner-only = [
+    "psycopg2-binary==2.9.6",
 ]

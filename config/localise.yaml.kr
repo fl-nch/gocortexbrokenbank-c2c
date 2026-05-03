@@ -601,7 +601,7 @@ spaceatm:
   terminal:
     title: "SpaceATM 터미널"
     subtitle: "화성 뱅킹 이니셔티브"
-    boot_message: "SpaceATM 터미널 v1.4.0 - 초기화 중..."
+    boot_message: "SpaceATM 터미널 v1.5.0 - 초기화 중..."
     ready_message: "터미널 준비 완료"
     manufacturer: "GoCortex IO Co., Ltd."
     manufacturer_location: "서울특별시 강남구 테헤란로 427"
@@ -610,7 +610,7 @@ spaceatm:
     serial_number: "SEL-SA-003847"
     model: "SA-7000 시리즈"
     firmware: "FW-2025.03.1"
-    version_label: "Broken Bank v1.4.0"
+    version_label: "Broken Bank v1.5.0"
     cve_surface: "CVE-2025-55182"
   
   currency:

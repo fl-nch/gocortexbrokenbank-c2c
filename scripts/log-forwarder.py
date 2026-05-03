@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # GoCortex Broken Bank - Tomcat Log Forwarder
-# Version: 1.4.0
+# Version: 1.5.0
 #
 # This script tails Tomcat access logs and forwards them to a configured
 # HTTP endpoint for SIEM ingestion. The logs are shipped in their native

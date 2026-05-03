@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # GoCortex Broken Bank - Log Shipping Module
-# Version: 1.4.0
+# Version: 1.5.0
 #
 # This module provides HTTP POST-based log shipping to external SIEM platforms.
 # Supports multiple log types: tomcat_access, netbank_application, netbank_auth
@@ -18,6 +18,7 @@ from queue import Queue, Full
 
 import yaml
 import requests
+import observability.metrics as metrics
 
 # Suppress SSL warnings for intentionally insecure configuration
 import urllib3
@@ -147,6 +148,8 @@ class LogShipper:
                 
                 if response.status_code in [200, 201, 202, 204]:
                     logging.debug(f"Log shipped successfully to {log_type}: {response.status_code}")
+                    if metrics.log_ship_total is not None:
+                        metrics.log_ship_total.add(1, {"log_type": log_type, "result": "success"})
                     return True
                 else:
                     logging.warning(f"Log shipping failed for {log_type}: {response.status_code} - {response.text[:200]}")
@@ -156,7 +159,9 @@ class LogShipper:
                 
             if attempt < max_attempts - 1:
                 time.sleep(backoff)
-        
+
+        if metrics.log_ship_total is not None:
+            metrics.log_ship_total.add(1, {"log_type": log_type, "result": "error"})
         return False
     
     def _start_worker(self):
@@ -175,6 +180,8 @@ class LogShipper:
             try:
                 # Block with timeout to allow checking _running flag
                 log_type, log_data = self._queue.get(timeout=1.0)
+                if metrics.log_ship_queue_depth is not None:
+                    metrics.log_ship_queue_depth.add(-1, {"log_type": log_type})
                 self.ship_log(log_type, log_data)
                 self._queue.task_done()
             except Exception:
@@ -188,6 +195,8 @@ class LogShipper:
         
         try:
             self._queue.put_nowait((log_type, log_data))
+            if metrics.log_ship_queue_depth is not None:
+                metrics.log_ship_queue_depth.add(1, {"log_type": log_type})
         except Full:
             logging.warning("Log shipping queue full, dropping log entry")
 
@@ -261,6 +270,68 @@ def log_auth_event(username, status, request_obj, simulated=False):
     }
     
     shipper.ship_log_async("netbank_auth", log_data)
+
+
+def log_concierge_event(event_type, request_obj, *, session_id, turn_id,
+                        model_name, prompt_text=None, response_text=None,
+                        response_path=None, context_document_count=0,
+                        context_document_labels=None, document_label=None,
+                        source_url=None, body_preview=None, body_length=None):
+    """
+    Log a Mars Banking Initiative Concierge event to the netbank_concierge stream.
+
+    event_type is one of:
+      - "prompt"          : inbound user prompt to /concierge/chat
+      - "response"        : Concierge model output for /concierge/chat
+      - "context_loaded"  : indirect-injection sink fired (URL or text upload)
+
+    The two chat events share a turn_id so a prompt-injection ruleset in XSIAM
+    can correlate the user's payload with the model's leaked output. The
+    context_loaded event captures attacker-controlled document text as it
+    enters the Concierge context window.
+    """
+    shipper = get_log_shipper()
+
+    user_agent = request_obj.headers.get("User-Agent", "unknown") if request_obj else "unknown"
+    source_ip = request_obj.remote_addr if request_obj else "unknown"
+    request_method = request_obj.method if request_obj else "unknown"
+    request_path = request_obj.path if request_obj else "unknown"
+
+    log_data = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "vendor": "GoCortex",
+        "product": "Concierge",
+        "event_type": event_type,
+        "source_ip": source_ip,
+        "user_agent": user_agent,
+        "request_method": request_method,
+        "request_path": request_path,
+        "session_id": session_id,
+        "turn_id": turn_id,
+        "model_name": model_name,
+        "context_document_count": context_document_count,
+        "context_document_labels": list(context_document_labels or []),
+    }
+
+    if prompt_text is not None:
+        log_data["prompt_text"] = str(prompt_text)
+    if response_text is not None:
+        log_data["response_text"] = str(response_text)
+    if response_path is not None:
+        log_data["response_path"] = response_path
+    if document_label is not None:
+        log_data["document_label"] = document_label
+    if source_url is not None:
+        log_data["source_url"] = source_url
+    if body_length is not None:
+        log_data["body_length"] = body_length
+    if body_preview is not None:
+        # Cap document preview at the same ~1000 char ceiling BBWAF uses for
+        # payloads so a single oversized indirect-injection upload cannot
+        # blow out the SIEM record.
+        log_data["body_preview"] = str(body_preview)[:1000]
+
+    shipper.ship_log_async("netbank_concierge", log_data)
 
 
 def _detect_country(ip_address):

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # GoCortex Broken Bank - Log Shipping Configuration
-# Version: 1.4.0
+# Version: 1.5.0
 #
 # This file configures HTTP POST-based log shipping to external SIEM platforms.
 # Endpoint URLs and authentication tokens should be set via environment variables.
@@ -50,6 +50,25 @@ endpoints:
       header_name: "Authorization"
       header_value: "${LOG_AUTH_NETBANK_APP}"
   
+  # Mars Banking Initiative Concierge chatbot prompts and responses (JSON)
+  # Carries every user prompt and Concierge response so that an XSIAM
+  # prompt-injection detection ruleset has something to match on. Also
+  # carries indirect-injection context_loaded events from the URL/text
+  # upload sinks. Vendor/product mirror the BBWAF / BrokenBank pattern.
+  netbank_concierge:
+    url: "${LOG_ENDPOINT_NETBANK_CONCIERGE}"
+    enabled: true
+    format: "json"
+    description: "Concierge chatbot prompts, responses, and loaded context for prompt-injection detection"
+
+    vendor: "GoCortex"
+    product: "Concierge"
+
+    auth:
+      type: "header"
+      header_name: "Authorization"
+      header_value: "${LOG_AUTH_NETBANK_CONCIERGE}"
+
   # NetBank authentication events - real and simulated (JSON)
   netbank_auth:
     url: "${LOG_ENDPOINT_NETBANK_AUTH}"

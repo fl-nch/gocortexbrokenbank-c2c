@@ -7,14 +7,13 @@ Flask==2.0.1
 Werkzeug==2.0.1
 Jinja2==3.0.1
 
-# Database and ORM vulnerabilities
+# Database and ORM (installed in container)
 SQLAlchemy==1.4.23
 Flask-SQLAlchemy==2.5.1
-psycopg2-binary==2.9.6
 
 # Authentication with weak implementations
 Flask-Login==0.5.0
-PyJWT==2.1.0
+PyJWT==1.7.1
 
 # Cryptography with known CVEs (CVE-2023-23931, CVE-2023-0286)
 cryptography==39.0.0
@@ -30,16 +29,24 @@ PyYAML==6.0
 ldap3==2.8.1
 
 # MongoDB injection vulnerabilities
-pymongo==3.11.4
+pymongo==3.12.0
 
 # Email validation bypass
 email-validator==1.1.3
 
 # WSGI server vulnerabilities
-gunicorn==20.0.4
+gunicorn==20.1.0
 
-# Additional vulnerable packages for comprehensive testing
-Pillow==8.3.2
+# OpenTelemetry observability stack (poll-based Prometheus scrape on port 9464)
+opentelemetry-sdk==1.41.0
+opentelemetry-exporter-prometheus==0.62b0
+prometheus-client==0.20.0
+
+# Image processing (installed in container)
+Pillow==8.1.0
+
+# === SCA scanner only - NOT installed in container; listed for SCA CVE coverage ===
+psycopg2-binary==2.9.6
 lxml==4.6.3
 paramiko==2.7.2
 pycrypto==2.6.1
@@ -83,7 +90,7 @@ subprocess32==3.5.4
 hashlib-compat==1.0.1
 
 # Runtime dependency for authentication traffic generator
-faker
+faker==18.13.0
 
 # PyGremlinBox varied license packages for license compliance testing
 # These packages trigger SCA license policy alerts for comprehensive testing
@@ -152,11 +159,3 @@ pygremlinbox-tpl-1-0==1.4.6
 pygremlinbox-ucl-1-0==1.4.6
 pygremlinbox-unlicense==1.4.6
 pygremlinbox-wxwindows==1.4.6
-
-# PyGremlinBox malware simulation packages for security testing
-pygremlinbox-malware-network-indicators==1.4.6
-pygremlinbox-malware-c2-beacon==1.4.6
-pygremlinbox-malware-code-obfuscation==1.4.6
-pygremlinbox-malware-install-execution==1.4.6
-pygremlinbox-malware-credential-harvesting==1.4.6
-pygremlinbox-malware-cryptomining-indicators==1.4.6

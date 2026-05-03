@@ -210,8 +210,8 @@ disclaimer:
         - "Private Keys - CKV_SECRET_13"
         - "Plus 70+ additional API keys and tokens"
     license:
-      title: "License Compliance Testing (71 packages)"
-      intro: "Includes 71 PyGremlinBox packages at v1.4.6 (65 varied license packages + 6 malware simulation packages) for comprehensive SCA and security testing:"
+      title: "License Compliance Testing (65 packages)"
+      intro: "Includes 65 PyGremlinBox packages at v1.4.6 (varied license packages) for comprehensive SCA license policy testing:"
       entries:
         - "Copyleft Licenses: AGPL (1.0/3.0 with version restrictions), GPL (2.0/3.0), LGPL (2.0/2.1/3.0)"
         - "Permissive Licenses: MPL (1.1/2.0), EPL (1.0/2.0), EUPL (1.1/1.2/3.0)"
@@ -219,8 +219,7 @@ disclaimer:
         - "Hardware Licenses: CERN OHL (S/W 2.0), TAPR OHL (1.0)"
         - "Business Licenses: SSPL (1.0), MS-LPL, BUSL (1.1), PolyForm (Noncommercial/Small Business)"
         - "Special Licenses: Copyleft Next (0.3.0/0.3.1), Hippocratic (2.1), Unlicense, and 40+ additional license types"
-        - "Malware Simulation: Network indicators, C2 beacon, code obfuscation, install execution, credential harvesting, cryptomining indicators"
-      footer: "These packages enable comprehensive testing of SCA tools' ability to detect, categorise, and enforce license policies and identify malware signatures across diverse package types."
+      footer: "These packages enable comprehensive testing of SCA tools' ability to detect, categorise, and enforce license policies across diverse package types."
     iac:
       title: "IaC Security Testing (30+ misconfigurations)"
       intro: "Dockerfile.BrokenBank contains intentional IaC misconfigurations for security scanner validation:"
@@ -601,7 +600,7 @@ spaceatm:
   terminal:
     title: "SpaceATM Terminal"
     subtitle: "Mars Banking Initiative"
-    boot_message: "SpaceATM Terminal v1.4.0 - Initialising..."
+    boot_message: "SpaceATM Terminal v1.5.0 - Initialising..."
     ready_message: "Terminal Ready"
     manufacturer: "GoCortex IO Pty Ltd"
     manufacturer_location: "Southbank VIC 3006"
@@ -610,7 +609,7 @@ spaceatm:
     serial_number: "VIC-SA-003847"
     model: "SA-7000 Series"
     firmware: "FW-2025.03.1"
-    version_label: "Broken Bank v1.4.0"
+    version_label: "Broken Bank v1.5.0"
     cve_surface: "CVE-2025-55182"
   
   currency:

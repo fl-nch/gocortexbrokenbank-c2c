@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # GoCortex Broken Bank - Anomaly Seed Configuration
-# Version: 1.4.0
+# Version: 1.5.0
 #
 # This file defines predictable suspicious patterns that are seeded into
 # the simulated authentication traffic for SIEM demo and testing purposes.

@@ -2,18 +2,22 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 import os
+import time
 import yaml
 import logging
 import random
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, flash, make_response, session
+from flask import Flask, render_template, request, redirect, url_for, flash, make_response, session, g
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.middleware.proxy_fix import ProxyFix
 # Proxy imports removed - no separate lab applications
 
 # Log shipping for SIEM integration
-from log_shipping import bbwaf_logging_middleware, log_auth_event
+from log_shipping import bbwaf_logging_middleware, log_auth_event, log_concierge_event
 from auth_traffic_generator import start_auth_generator
+
+# OTel poll-based metrics (Prometheus scrape endpoint on port 9464)
+from observability.metrics import init_metrics
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -49,7 +53,36 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False  # Suppress Flask-SQLAlchem
 db.init_app(app)
 
 # Application version
-APP_VERSION = "1.4.0"
+APP_VERSION = "1.5.0"
+
+# OTel metrics - start Prometheus scrape endpoint on port 9464
+init_metrics(port=9464)
+
+# Flask HTTP instrumentation - record per-request counts and durations.
+# Skips the /metrics path itself to avoid self-scrape noise in the output.
+@app.before_request
+def _metrics_before_request():
+    from observability import metrics as _m
+    if request.path != "/metrics" and _m.http_requests is not None:
+        g._metrics_start = time.time()
+
+@app.after_request
+def _metrics_after_request(response):
+    from observability import metrics as _m
+    start = getattr(g, "_metrics_start", None)
+    if start is not None and _m.http_requests is not None:
+        duration = time.time() - start
+        labels = {
+            "method": request.method,
+            "endpoint": request.endpoint or request.path,
+            "status_code": str(response.status_code),
+        }
+        _m.http_requests.add(1, labels)
+        _m.http_request_duration.record(
+            duration,
+            {"method": request.method, "endpoint": request.endpoint or request.path},
+        )
+    return response
 
 # Testing URLs for cybersecurity validation purposes only - these are fictitious endpoints
 # used by automated security scanners to validate URL filtering and threat detection capabilities
@@ -187,6 +220,151 @@ def index():
 @app.route('/disclaimer')
 def disclaimer():
     return render_template('disclaimer.html')
+
+# Mars Banking Initiative Concierge - intentionally vulnerable LLM chatbot
+# Demonstrates OWASP LLM Top 10: LLM01 Prompt Injection, LLM02 Insecure Output
+# Handling, LLM06 Sensitive Information Disclosure, LLM08 Excessive Agency.
+from chatbot import concierge as _concierge
+
+# Pre-warm the SmolLM2 GGUF in a background thread so the first
+# /concierge/chat request does not pay the multi-second cold-load
+# latency. Without this the live demo has a visible "tell": injection
+# prompts (which used to short-circuit the LLM) returned instantly
+# while the first safe banking turn took 10+ seconds, breaking the
+# illusion that the model is actually being attacked.
+_concierge.start_warmup()
+
+CONCIERGE_MODEL_NAME = os.environ.get(
+    "CONCIERGE_MODEL_NAME", "SmolLM2-135M-Instruct GGUF Q4_K_M"
+)
+
+@app.route('/concierge')
+def concierge_page():
+    """Render the Mars Banking Initiative Concierge chat page."""
+    return render_template(
+        'concierge.html',
+        model_name=CONCIERGE_MODEL_NAME,
+        context_count=len(_concierge.get_extra_context()),
+    )
+
+def _concierge_session_id():
+    """Return a stable session id for SIEM correlation, minting one on first use."""
+    sid = session.get('concierge_session_id')
+    if not sid:
+        import uuid as _uuid
+        sid = _uuid.uuid4().hex
+        session['concierge_session_id'] = sid
+    return sid
+
+
+def _concierge_context_labels():
+    return [label for label, _body in _concierge.get_extra_context()]
+
+
+@app.route('/concierge/chat', methods=['POST'])
+def concierge_chat():
+    """Intentionally vulnerable chat endpoint.
+
+    No input sanitisation, no output filter, no allow-list, no rate limit.
+    Logs full prompts and responses to stdout for SIEM training, and ships
+    one prompt event and one response event per turn (correlated by
+    turn_id) to the netbank_concierge XSIAM stream so a prompt-injection
+    detection ruleset has something to match on.
+    """
+    user_message = request.form.get('message', '') or request.values.get('message', '')
+    if not user_message:
+        return "No message provided", 400
+    logging.info("CONCIERGE REQUEST remote=%s ua=%s message=%r",
+                 request.remote_addr, request.headers.get('User-Agent', ''),
+                 user_message)
+
+    import uuid as _uuid
+    turn_id = _uuid.uuid4().hex
+    session_id = _concierge_session_id()
+    context_labels = _concierge_context_labels()
+
+    log_concierge_event(
+        "prompt", request,
+        session_id=session_id, turn_id=turn_id,
+        model_name=CONCIERGE_MODEL_NAME,
+        prompt_text=user_message,
+        context_document_count=len(context_labels),
+        context_document_labels=context_labels,
+    )
+
+    response_text, response_path = _concierge.generate(user_message)
+
+    # Re-read context labels in case generate() (or the model) mutated state.
+    context_labels = _concierge_context_labels()
+    log_concierge_event(
+        "response", request,
+        session_id=session_id, turn_id=turn_id,
+        model_name=CONCIERGE_MODEL_NAME,
+        response_text=response_text,
+        response_path=response_path,
+        context_document_count=len(context_labels),
+        context_document_labels=context_labels,
+    )
+
+    return response_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+
+@app.route('/concierge/load_url', methods=['POST'])
+def concierge_load_url():
+    """Indirect prompt-injection sink: fetch a URL and add to context.
+
+    No URL validation, no SSRF guard, no sanitisation of fetched content.
+    """
+    url = request.form.get('url', '')
+    if not url:
+        return "No url provided", 400
+    import requests as _req
+    try:
+        resp = _req.get(url, verify=False, timeout=10)
+        body = resp.text[:8000]
+        _concierge.add_context_document(url, body)
+
+        import uuid as _uuid
+        context_labels = _concierge_context_labels()
+        log_concierge_event(
+            "context_loaded", request,
+            session_id=_concierge_session_id(),
+            turn_id=_uuid.uuid4().hex,
+            model_name=CONCIERGE_MODEL_NAME,
+            document_label=url,
+            source_url=url,
+            body_preview=body,
+            body_length=len(body),
+            context_document_count=len(context_labels),
+            context_document_labels=context_labels,
+        )
+        return f"Loaded {len(body)} characters from {url} into Concierge context"
+    except Exception as exc:
+        return f"Failed to load {url}: {exc}", 502
+
+@app.route('/concierge/load_text', methods=['POST'])
+def concierge_load_text():
+    """Indirect prompt-injection sink: accept raw text into context."""
+    label = request.form.get('label', 'uploaded-document')
+    body = request.form.get('body', '')
+    if not body:
+        return "No body provided", 400
+    truncated = body[:16000]
+    _concierge.add_context_document(label, truncated)
+
+    import uuid as _uuid
+    context_labels = _concierge_context_labels()
+    log_concierge_event(
+        "context_loaded", request,
+        session_id=_concierge_session_id(),
+        turn_id=_uuid.uuid4().hex,
+        model_name=CONCIERGE_MODEL_NAME,
+        document_label=label,
+        body_preview=truncated,
+        body_length=len(truncated),
+        context_document_count=len(context_labels),
+        context_document_labels=context_labels,
+    )
+    return f"Added document {label!r} ({len(body)} chars) to Concierge context"
 
 # Banking Pages
 @app.route('/netbank')

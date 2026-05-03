@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # GoCortex Broken Bank - Background Authentication Traffic Generator
-# Version: 1.4.0
+# Version: 1.5.0
 #
 # This module generates simulated authentication traffic for SIEM testing.
 # It produces realistic-looking login events with seeded anomalies for demo purposes.
@@ -18,6 +18,7 @@ import yaml
 from faker import Faker
 
 from log_shipping import get_log_shipper
+import observability.metrics as metrics
 
 # Initialise Faker for username generation
 fake = Faker(['en_AU', 'en_GB', 'en_US'])
@@ -162,6 +163,10 @@ class AuthTrafficGenerator:
         
         if now - last_time >= frequency_minutes * 60:
             self.last_anomaly_time[anomaly_type] = now
+            if metrics.auth_anomaly_injections is not None:
+                metrics.auth_anomaly_injections.add(
+                    1, {"type": anomaly_type}
+                )
             return True
         return False
     
@@ -237,7 +242,11 @@ class AuthTrafficGenerator:
         adjusted_rate = max(60, min(98, base_success_rate + hour_modifier))
         success_rate = adjusted_rate / 100
         status = "success" if random.random() < success_rate else "failure"
-        
+
+        if metrics.auth_events is not None:
+            is_anomaly = "true" if (inject_suspicious_ip or inject_suspicious_ua) else "false"
+            metrics.auth_events.add(1, {"status": status, "anomaly": is_anomaly})
+
         country = self._get_random_country()
         device_type = self._get_device_type(user_agent)
         

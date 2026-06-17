@@ -214,9 +214,9 @@ Resources:
       InstanceTypes:
         - !Ref NodeInstanceType
       ScalingConfig:
-        MinSize: !Ref NodeAutoScalingMin
-        MaxSize: !Ref NodeAutoScalingMax
-        DesiredSize: !Ref NodeAutoScalingDesired
+        MinSize: 1
+        MaxSize: 3
+        DesiredSize: 2
 
 Outputs:
   ClusterName:

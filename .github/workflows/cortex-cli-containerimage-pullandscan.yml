@@ -1,4 +1,4 @@
-name: Cortex CLI Code Scan
+name: cortexcli Container Image Scan
 
 on:
   workflow_dispatch:

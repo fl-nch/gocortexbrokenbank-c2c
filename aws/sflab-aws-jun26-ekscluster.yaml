@@ -73,7 +73,24 @@ Resources:
           Value: !Sub '${ClusterName}-subnet-1'
         - Key: !Sub 'kubernetes.io/cluster/${ClusterName}'
           Value: 'shared'
-
+        - Key: git_file
+          Value: aws/sflab-aws-jun26-ekscluster.yaml
+        - Key: git_commit
+          Value: 307c4cea96825fbc28ea736c256f7a75ad3ca298
+        - Key: yor_trace
+          Value: 733090a1-68b1-4ca8-9ee6-3b145742bd24
+        - Key: yor_name
+          Value: EKSSubnet1
+        - Key: git_last_modified_by
+          Value: 156729790+fl-nch@users.noreply.github.com
+        - Key: git_last_modified_at
+          Value: "2026-06-17 02:17:28"
+        - Key: git_repo
+          Value: gocortexbrokenbank-c2c
+        - Key: git_org
+          Value: fl-nch
+        - Key: git_modifiers
+          Value: 156729790+fl-nch
   EKSSubnet2:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -86,6 +103,24 @@ Resources:
           Value: !Sub '${ClusterName}-subnet-2'
         - Key: !Sub 'kubernetes.io/cluster/${ClusterName}'
           Value: 'shared'
+        - Key: git_modifiers
+          Value: 156729790+fl-nch
+        - Key: git_file
+          Value: aws/sflab-aws-jun26-ekscluster.yaml
+        - Key: git_commit
+          Value: 307c4cea96825fbc28ea736c256f7a75ad3ca298
+        - Key: yor_trace
+          Value: 4970d4c7-85ea-4c02-aa2a-0958dcf795e6
+        - Key: yor_name
+          Value: EKSSubnet2
+        - Key: git_repo
+          Value: gocortexbrokenbank-c2c
+        - Key: git_org
+          Value: fl-nch
+        - Key: git_last_modified_by
+          Value: 156729790+fl-nch@users.noreply.github.com
+        - Key: git_last_modified_at
+          Value: "2026-06-17 02:17:28"
 
   # --- Routing Setup using Existing Internet Gateway ---
   PublicRouteTable:
@@ -95,20 +130,35 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${ClusterName}-public-rt'
-
+        - Key: yor_name
+          Value: PublicRouteTable
+        - Key: git_org
+          Value: fl-nch
+        - Key: git_last_modified_by
+          Value: 156729790+fl-nch@users.noreply.github.com
+        - Key: git_file
+          Value: aws/sflab-aws-jun26-ekscluster.yaml
+        - Key: yor_trace
+          Value: ebe68a98-ad14-4b60-8586-9aa56f8d6f2c
+        - Key: git_repo
+          Value: gocortexbrokenbank-c2c
+        - Key: git_modifiers
+          Value: 156729790+fl-nch
+        - Key: git_last_modified_at
+          Value: "2026-06-17 02:17:28"
+        - Key: git_commit
+          Value: 307c4cea96825fbc28ea736c256f7a75ad3ca298
   PublicRoute:
     Type: 'AWS::EC2::Route'
     Properties:
       RouteTableId: !Ref PublicRouteTable
       DestinationCidrBlock: '0.0.0.0/0'
       GatewayId: !Ref InternetGatewayId
-
   Subnet1RouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       SubnetId: !Ref EKSSubnet1
       RouteTableId: !Ref PublicRouteTable
-
   Subnet2RouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
@@ -130,6 +180,25 @@ Resources:
               - 'sts:AssumeRole'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/AmazonEKSClusterPolicy'
+      Tags:
+        - Key: yor_trace
+          Value: e3d9692b-d19e-4c41-8ba1-6304b72e889d
+        - Key: git_repo
+          Value: gocortexbrokenbank-c2c
+        - Key: git_last_modified_at
+          Value: "2026-06-17 02:17:28"
+        - Key: git_commit
+          Value: 307c4cea96825fbc28ea736c256f7a75ad3ca298
+        - Key: yor_name
+          Value: EKSClusterRole
+        - Key: git_org
+          Value: fl-nch
+        - Key: git_modifiers
+          Value: 156729790+fl-nch
+        - Key: git_last_modified_by
+          Value: 156729790+fl-nch@users.noreply.github.com
+        - Key: git_file
+          Value: aws/sflab-aws-jun26-ekscluster.yaml
 
   # --- Security Group for the Control Plane ---
   ClusterControlPlaneSecurityGroup:
@@ -143,6 +212,25 @@ Resources:
           ToPort: 443
           CidrIp: !Ref WorkstationIngressCidr
           Description: 'Allow workstation to communicate with the cluster API Server'
+      Tags:
+        - Key: git_last_modified_at
+          Value: "2026-06-17 02:17:28"
+        - Key: yor_name
+          Value: ClusterControlPlaneSecurityGroup
+        - Key: git_repo
+          Value: gocortexbrokenbank-c2c
+        - Key: git_org
+          Value: fl-nch
+        - Key: git_modifiers
+          Value: 156729790+fl-nch
+        - Key: yor_trace
+          Value: f637d313-5ed5-4fb8-a106-cd6a33643484
+        - Key: git_last_modified_by
+          Value: 156729790+fl-nch@users.noreply.github.com
+        - Key: git_file
+          Value: aws/sflab-aws-jun26-ekscluster.yaml
+        - Key: git_commit
+          Value: 307c4cea96825fbc28ea736c256f7a75ad3ca298
 
   # --- EKS Cluster Resource ---
   EKSCluster:
@@ -165,20 +253,75 @@ Resources:
       AddonName: 'vpc-cni'
       ClusterName: !Ref EKSCluster
       ResolveConflicts: OVERWRITE
-
+      Tags:
+        - Key: yor_trace
+          Value: 323699c8-ccc7-4028-a6b0-44c5f197a4bb
+        - Key: git_repo
+          Value: gocortexbrokenbank-c2c
+        - Key: git_last_modified_at
+          Value: "2026-06-17 02:17:28"
+        - Key: git_file
+          Value: aws/sflab-aws-jun26-ekscluster.yaml
+        - Key: yor_name
+          Value: VpcCniAddon
+        - Key: git_org
+          Value: fl-nch
+        - Key: git_modifiers
+          Value: 156729790+fl-nch
+        - Key: git_last_modified_by
+          Value: 156729790+fl-nch@users.noreply.github.com
+        - Key: git_commit
+          Value: 307c4cea96825fbc28ea736c256f7a75ad3ca298
   CoreDnsAddon:
     Type: 'AWS::EKS::Addon'
     Properties:
       AddonName: 'coredns'
       ClusterName: !Ref EKSCluster
       ResolveConflicts: OVERWRITE
-
+      Tags:
+        - Key: git_modifiers
+          Value: 156729790+fl-nch
+        - Key: git_last_modified_at
+          Value: "2026-06-17 02:17:28"
+        - Key: git_commit
+          Value: 307c4cea96825fbc28ea736c256f7a75ad3ca298
+        - Key: yor_trace
+          Value: ba1cc55b-cb8f-4006-95c6-241745208d91
+        - Key: yor_name
+          Value: CoreDnsAddon
+        - Key: git_repo
+          Value: gocortexbrokenbank-c2c
+        - Key: git_org
+          Value: fl-nch
+        - Key: git_last_modified_by
+          Value: 156729790+fl-nch@users.noreply.github.com
+        - Key: git_file
+          Value: aws/sflab-aws-jun26-ekscluster.yaml
   KubeProxyAddon:
     Type: 'AWS::EKS::Addon'
     Properties:
       AddonName: 'kube-proxy'
       ClusterName: !Ref EKSCluster
       ResolveConflicts: OVERWRITE
+      Tags:
+        - Key: yor_trace
+          Value: 1f250163-3b9d-45e5-a9b0-89034ca4874e
+        - Key: yor_name
+          Value: KubeProxyAddon
+        - Key: git_repo
+          Value: gocortexbrokenbank-c2c
+        - Key: git_modifiers
+          Value: 156729790+fl-nch
+        - Key: git_last_modified_by
+          Value: 156729790+fl-nch@users.noreply.github.com
+        - Key: git_last_modified_at
+          Value: "2026-06-17 02:17:28"
+        - Key: git_org
+          Value: fl-nch
+        - Key: git_file
+          Value: aws/sflab-aws-jun26-ekscluster.yaml
+        - Key: git_commit
+          Value: 307c4cea96825fbc28ea736c256f7a75ad3ca298
 
   # --- IAM Role for EKS Worker Nodes ---
   EKSNodeRole:
@@ -197,6 +340,25 @@ Resources:
         - 'arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy'
         - 'arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy'
         - 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'
+      Tags:
+        - Key: git_commit
+          Value: 307c4cea96825fbc28ea736c256f7a75ad3ca298
+        - Key: yor_trace
+          Value: 42fa5485-aa27-47ae-a975-fc86b0077e9c
+        - Key: yor_name
+          Value: EKSNodeRole
+        - Key: git_last_modified_by
+          Value: 156729790+fl-nch@users.noreply.github.com
+        - Key: git_file
+          Value: aws/sflab-aws-jun26-ekscluster.yaml
+        - Key: git_repo
+          Value: gocortexbrokenbank-c2c
+        - Key: git_org
+          Value: fl-nch
+        - Key: git_modifiers
+          Value: 156729790+fl-nch
+        - Key: git_last_modified_at
+          Value: "2026-06-17 02:17:28"
 
   # --- Managed Node Group ---
   EKSManagedNodeGroup:
@@ -217,6 +379,25 @@ Resources:
         MinSize: 1
         MaxSize: 3
         DesiredSize: 2
+      Tags:
+        - Key: git_repo
+          Value: gocortexbrokenbank-c2c
+        - Key: git_modifiers
+          Value: 156729790+fl-nch
+        - Key: git_last_modified_by
+          Value: 156729790+fl-nch@users.noreply.github.com
+        - Key: git_last_modified_at
+          Value: "2026-06-17 02:57:01"
+        - Key: git_commit
+          Value: 3c1683202edd4ee99f5a3927f87ddac4fd0f2789
+        - Key: yor_name
+          Value: EKSManagedNodeGroup
+        - Key: git_org
+          Value: fl-nch
+        - Key: git_file
+          Value: aws/sflab-aws-jun26-ekscluster.yaml
+        - Key: yor_trace
+          Value: f40561e0-f5fb-4adf-ab5b-96cb3ed97fb3
 
 Outputs:
   ClusterName:

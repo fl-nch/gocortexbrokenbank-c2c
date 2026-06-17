@@ -73,6 +73,8 @@ Resources:
           Value: !Sub '${ClusterName}-subnet-1'
         - Key: !Sub 'kubernetes.io/cluster/${ClusterName}'
           Value: 'shared'
+        - Key: 'kubernetes.io/role/elb'
+          Value: '1'
         - Key: git_file
           Value: aws/sflab-aws-jun26-ekscluster.yaml
         - Key: git_commit
@@ -103,6 +105,8 @@ Resources:
           Value: !Sub '${ClusterName}-subnet-2'
         - Key: !Sub 'kubernetes.io/cluster/${ClusterName}'
           Value: 'shared'
+        - Key: 'kubernetes.io/role/elb'
+          Value: '1'
         - Key: git_modifiers
           Value: 156729790+fl-nch
         - Key: git_file
@@ -380,24 +384,15 @@ Resources:
         MaxSize: 3
         DesiredSize: 2
       Tags:
-        - Key: git_repo
-          Value: gocortexbrokenbank-c2c
-        - Key: git_modifiers
-          Value: 156729790+fl-nch
-        - Key: git_last_modified_by
-          Value: 156729790+fl-nch@users.noreply.github.com
-        - Key: git_last_modified_at
-          Value: "2026-06-17 02:57:01"
-        - Key: git_commit
-          Value: 3c1683202edd4ee99f5a3927f87ddac4fd0f2789
-        - Key: yor_name
-          Value: EKSManagedNodeGroup
-        - Key: git_org
-          Value: fl-nch
-        - Key: git_file
-          Value: aws/sflab-aws-jun26-ekscluster.yaml
-        - Key: yor_trace
-          Value: f40561e0-f5fb-4adf-ab5b-96cb3ed97fb3
+        git_repo: gocortexbrokenbank-c2c
+        git_modifiers: 156729790+fl-nch
+        git_last_modified_by: 156729790+fl-nch@users.noreply.github.com
+        git_last_modified_at: "2026-06-17 02:57:01"
+        git_commit: 3c1683202edd4ee99f5a3927f87ddac4fd0f2789
+        yor_name: EKSManagedNodeGroup
+        git_org: fl-nch
+        git_file: aws/sflab-aws-jun26-ekscluster.yaml
+        yor_trace: f40561e0-f5fb-4adf-ab5b-96cb3ed97fb3
 
 Outputs:
   ClusterName:

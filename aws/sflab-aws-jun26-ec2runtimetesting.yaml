@@ -38,6 +38,25 @@ Resources:
           FromPort: 22
           ToPort: 22
           CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: yor_name
+          Value: InstanceSecurityGroup
+        - Key: git_repo
+          Value: gocortexbrokenbank-c2c
+        - Key: git_org
+          Value: fl-nch
+        - Key: git_modifiers
+          Value: 156729790+fl-nch
+        - Key: git_last_modified_by
+          Value: 156729790+fl-nch@users.noreply.github.com
+        - Key: git_last_modified_at
+          Value: "2026-06-17 02:17:28"
+        - Key: git_file
+          Value: aws/sflab-aws-jun26-ec2runtimetesting.yaml
+        - Key: yor_trace
+          Value: dcd5ee9d-086a-4949-aab7-de61108bd35a
+        - Key: git_commit
+          Value: 307c4cea96825fbc28ea736c256f7a75ad3ca298
 
   # =========================================================================
   # EC2 Instances
@@ -57,7 +76,24 @@ Resources:
       Tags:
         - Key: Name
           Value: runtimetest-xdragent
-
+        - Key: git_org
+          Value: fl-nch
+        - Key: git_last_modified_by
+          Value: 156729790+fl-nch@users.noreply.github.com
+        - Key: git_file
+          Value: aws/sflab-aws-jun26-ec2runtimetesting.yaml
+        - Key: git_commit
+          Value: 307c4cea96825fbc28ea736c256f7a75ad3ca298
+        - Key: yor_trace
+          Value: 248e4da5-e212-476c-83f3-3a466b025cee
+        - Key: yor_name
+          Value: XdrAgentInstance
+        - Key: git_repo
+          Value: gocortexbrokenbank-c2c
+        - Key: git_modifiers
+          Value: 156729790+fl-nch
+        - Key: git_last_modified_at
+          Value: "2026-06-17 02:17:28"
   AgentlessInstance:
     Type: AWS::EC2::Instance
     Properties:
@@ -73,6 +109,24 @@ Resources:
       Tags:
         - Key: Name
           Value: runtimetest-agentless
+        - Key: git_last_modified_at
+          Value: "2026-06-17 02:17:28"
+        - Key: git_file
+          Value: aws/sflab-aws-jun26-ec2runtimetesting.yaml
+        - Key: git_commit
+          Value: 307c4cea96825fbc28ea736c256f7a75ad3ca298
+        - Key: yor_trace
+          Value: 5d38747b-392f-4ef3-95fe-05a64facba32
+        - Key: yor_name
+          Value: AgentlessInstance
+        - Key: git_org
+          Value: fl-nch
+        - Key: git_last_modified_by
+          Value: 156729790+fl-nch@users.noreply.github.com
+        - Key: git_repo
+          Value: gocortexbrokenbank-c2c
+        - Key: git_modifiers
+          Value: 156729790+fl-nch
 
 Outputs:
   XdrAgentPublicIp:

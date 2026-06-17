@@ -9,9 +9,10 @@
 name: Build and Push to GHCR
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+#  push:
+#    tags:
+#      - 'v*'
 
 env:
   REGISTRY: ghcr.io

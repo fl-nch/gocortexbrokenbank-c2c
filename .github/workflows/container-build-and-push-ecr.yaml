@@ -8,7 +8,7 @@ on:
 env:
   AWS_REGION: ap-southeast-2                         # Replace with your AWS Region
   ECR_REPOSITORY: gocortexbrokenbank-c2c                        # Replace with your ECR Repository name
-  AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActionsECRPush  # Replace with your IAM Role ARN
+  AWS_ROLE_ARN: arn:aws:iam::570486163909:role/github-actions-deploy-role-sflab-aws-jun26-ekscluster  # Replace with your IAM Role ARN
 
 permissions:
   id-token: write  # Required for requesting the OIDC JWT token

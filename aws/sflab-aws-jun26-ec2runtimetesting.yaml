@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Deploys two EC2 instances with public IPs and SSH-only security group rules.'
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: 'The VPC ID where the security group will be created.'
+
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: 'The public Subnet ID where the EC2 instances will be launched. Ensure this subnet is associated with a route to an Internet Gateway.'
+
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: 'The name of the EC2 Key Pair to associate with the instances for SSH access.'
+
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    Description: 'The EC2 instance type.'
+
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64'
+    Description: 'The SSM parameter path to fetch the latest Amazon Linux 2023 AMI ID.'
+
+Resources:
+  # =========================================================================
+  # Security Group (Inbound TCP/22 Only)
+  # =========================================================================
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Permit inbound SSH traffic only'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  # =========================================================================
+  # EC2 Instances
+  # =========================================================================
+  XdrAgentInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref LatestAmiId
+      KeyName: !Ref KeyPairName
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: '0'
+          SubnetId: !Ref SubnetId
+          GroupSet:
+            - !Ref InstanceSecurityGroup
+      Tags:
+        - Key: Name
+          Value: runtimetest-xdragent
+
+  AgentlessInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref LatestAmiId
+      KeyName: !Ref KeyPairName
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: '0'
+          SubnetId: !Ref SubnetId
+          GroupSet:
+            - !Ref InstanceSecurityGroup
+      Tags:
+        - Key: Name
+          Value: runtimetest-agentless
+
+Outputs:
+  XdrAgentPublicIp:
+    Description: 'Public IP of the runtimetest-xdragent instance'
+    Value: !GetAtt XdrAgentInstance.PublicIp
+
+  AgentlessPublicIp:
+    Description: 'Public IP of the runtimetest-agentless instance'
+    Value: !GetAtt AgentlessInstance.PublicIp

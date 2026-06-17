@@ -1,0 +1,236 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Deploys an Amazon EKS Cluster (v1.35) with public subnets routed through an existing Internet Gateway, and an AL2023 Managed Node Group.'
+
+Parameters:
+  VpcId:
+    Type: 'AWS::EC2::VPC::Id'
+    Description: 'The ID of the existing VPC where the new subnets, route table, and EKS Cluster will be deployed.'
+
+  InternetGatewayId:
+    Type: String
+    Description: 'The ID of the existing Internet Gateway attached to your VPC (e.g., igw-1234567890abcdef0).'
+
+  Subnet1Cidr:
+    Type: String
+    Default: '10.0.101.0/24'
+    Description: 'The CIDR block for the first new subnet (must be within your VPC CIDR range).'
+
+  Subnet1AZ:
+    Type: 'AWS::EC2::AvailabilityZone::Name'
+    Description: 'The Availability Zone for the first subnet.'
+
+  Subnet2Cidr:
+    Type: String
+    Default: '10.0.102.0/24'
+    Description: 'The CIDR block for the second new subnet (must be within your VPC CIDR range and different from Subnet 1).'
+
+  Subnet2AZ:
+    Type: 'AWS::EC2::AvailabilityZone::Name'
+    Description: 'The Availability Zone for the second subnet.'
+
+  ClusterName:
+    Type: String
+    Default: 'my-eks-cluster'
+    Description: 'The name of the Amazon EKS cluster.'
+
+  WorkstationIngressCidr:
+    Type: String
+    Default: '0.0.0.0/0'
+    Description: 'The CIDR block allowed to access the EKS API server endpoint (e.g., your public IP address /32).'
+
+  # --- Node Group Configuration Parameters ---
+  NodeInstanceType:
+    Type: String
+    Default: 't3.medium'
+    Description: 'The EC2 instance type for the EKS worker nodes.'
+
+  NodeAutoScalingMin:
+    Type: Number
+    Default: 1
+    Description: 'The minimum number of worker nodes.'
+
+  NodeAutoScalingMax:
+    Type: Number
+    Default: 3
+    Description: 'The maximum number of worker nodes.'
+
+  NodeAutoScalingDesired:
+    Type: Number
+    Default: 2
+    Description: 'The desired number of worker nodes.'
+
+Resources:
+  # --- Subnets ---
+  EKSSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VpcId
+      CidrBlock: !Ref Subnet1Cidr
+      AvailabilityZone: !Ref Subnet1AZ
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${ClusterName}-subnet-1'
+        - Key: !Sub 'kubernetes.io/cluster/${ClusterName}'
+          Value: 'shared'
+
+  EKSSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VpcId
+      CidrBlock: !Ref Subnet2Cidr
+      AvailabilityZone: !Ref Subnet2AZ
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${ClusterName}-subnet-2'
+        - Key: !Sub 'kubernetes.io/cluster/${ClusterName}'
+          Value: 'shared'
+
+  # --- Routing Setup using Existing Internet Gateway ---
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Sub '${ClusterName}-public-rt'
+
+  PublicRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref InternetGatewayId
+
+  Subnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref EKSSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  Subnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref EKSSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  # --- IAM Role for EKS Control Plane ---
+  EKSClusterRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - 'eks.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonEKSClusterPolicy'
+
+  # --- Security Group for the Control Plane ---
+  ClusterControlPlaneSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Security Group for EKS Control Plane communication'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref WorkstationIngressCidr
+          Description: 'Allow workstation to communicate with the cluster API Server'
+
+  # --- EKS Cluster Resource ---
+  EKSCluster:
+    Type: 'AWS::EKS::Cluster'
+    Properties:
+      Name: !Ref ClusterName
+      Version: '1.35'
+      RoleArn: !GetAtt EKSClusterRole.Arn
+      ResourcesVpcConfig:
+        SecurityGroupIds:
+          - !Ref ClusterControlPlaneSecurityGroup
+        SubnetIds:
+          - !Ref EKSSubnet1
+          - !Ref EKSSubnet2
+
+  # --- Managed Add-ons ---
+  VpcCniAddon:
+    Type: 'AWS::EKS::Addon'
+    Properties:
+      AddonName: 'vpc-cni'
+      ClusterName: !Ref EKSCluster
+      ResolveConflicts: OVERWRITE
+
+  CoreDnsAddon:
+    Type: 'AWS::EKS::Addon'
+    Properties:
+      AddonName: 'coredns'
+      ClusterName: !Ref EKSCluster
+      ResolveConflicts: OVERWRITE
+
+  KubeProxyAddon:
+    Type: 'AWS::EKS::Addon'
+    Properties:
+      AddonName: 'kube-proxy'
+      ClusterName: !Ref EKSCluster
+      ResolveConflicts: OVERWRITE
+
+  # --- IAM Role for EKS Worker Nodes ---
+  EKSNodeRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - 'ec2.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy'
+        - 'arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy'
+        - 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'
+
+  # --- Managed Node Group ---
+  EKSManagedNodeGroup:
+    Type: 'AWS::EKS::Nodegroup'
+    DependsOn:
+      - VpcCniAddon
+    Properties:
+      ClusterName: !Ref EKSCluster
+      NodegroupName: !Sub '${ClusterName}-node-group'
+      NodeRole: !GetAtt EKSNodeRole.Arn
+      Subnets:
+        - !Ref EKSSubnet1
+        - !Ref EKSSubnet2
+      AmiType: 'AL2023_x86_64_STANDARD' # Standard Amazon Linux 2023 for EKS 1.35 cgroup v2 compatibility
+      InstanceTypes:
+        - !Ref NodeInstanceType
+      ScalingConfig:
+        MinSize: !Ref NodeAutoScalingMin
+        MaxSize: !Ref NodeAutoScalingMax
+        DesiredSize: !Ref NodeAutoScalingDesired
+
+Outputs:
+  ClusterName:
+    Description: 'The EKS Cluster Name'
+    Value: !Ref EKSCluster
+  ClusterArn:
+    Description: 'The Amazon Resource Name (ARN) of the EKS Cluster'
+    Value: !GetAtt EKSCluster.Arn
+  ClusterEndpoint:
+    Description: 'The endpoint for your EKS Kubernetes API server'
+    Value: !GetAtt EKSCluster.Endpoint
+  CreatedSubnet1Id:
+    Description: 'The Subnet ID of the first newly created subnet'
+    Value: !Ref EKSSubnet1
+  CreatedSubnet2Id:
+    Description: 'The Subnet ID of the second newly created subnet'
+    Value: !Ref EKSSubnet2

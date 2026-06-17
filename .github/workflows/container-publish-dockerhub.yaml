@@ -10,9 +10,11 @@
 name: Build and Push to Docker Hub
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    
+#  push:
+#    tags:
+#      - 'v*'
 
 env:
   REGISTRY: docker.io

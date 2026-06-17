@@ -1,0 +1,26 @@
+name: IaC Tagging
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write # Required so the action can commit back to the repo
+
+jobs:
+  yor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+
+      - name: Run yor action
+        uses: bridgecrewio/yor-action@main
+        with:
+          # Limit the execution strictly to the "aws" directory
+          directory: aws
+          
+          commit_changes: true # Auto commit changes
+
